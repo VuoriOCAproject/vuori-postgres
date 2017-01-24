@@ -1,8 +1,8 @@
 var sys = require("sys"),
     fs = require("fs")
 
-module.exports = function translate(callback) {
-    fs.readFile('customers.csv', 'utf-8', (err, data) => {
+module.exports = function translateOrderLineItem(callback) {
+    fs.readFile('orderlineitems.csv', 'utf-8', (err, data) => {
         if (err) {
             callback(err, null);
         }

@@ -1,9 +1,8 @@
 var sys = require("sys"),
-    fs = require("fs"),
-    moment = require("moment")
+    fs = require("fs")
 
-module.exports = function translateWithDate(callback) {
-    fs.readFile('orders.csv', 'utf-8', (err, data) => {
+module.exports = function translateCustomer(callback) {
+    fs.readFile('customers.csv', 'utf-8', (err, data) => {
         if (err) {
             callback(err, null);
         }
@@ -19,9 +18,7 @@ module.exports = function translateWithDate(callback) {
 
             columns.forEach(function(column) {
                 innerValues.push(`'${column.replace('\'', '')}'`);
-                
             });
-            innerValues[3] = moment(innerValues[3]).format('LLL');
 
             values.push(`(${innerValues.join(',')})`);
         });
