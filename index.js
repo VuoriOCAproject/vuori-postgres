@@ -1,94 +1,41 @@
-const pg = require('pg')
-const translateCustomer = require('./scripts/translateCustomer.js')
-const translateOrder = require('./scripts/translateOrder.js')
-const translateOrderLineItem = require('./scripts/translateOrderLineItem.js')
-const translateProduct = require('./scripts/translateProduct.js')
+const extract = require('./lib/extract');
+const load = require('./lib/load');
 
-// db connection string
-const connection = "postgres://postgres:lawyer@localhost/testdb";
-
-// import product table
-translateProduct(function(err, values) {
-    pg.connect(connection, function(err, client, done) {
-        if (err) {
-            return console.error('error', err)
-        }
-
-        const query = 'insert into tests.product (productId, name, color, price, productAdjective, productMaterial)' 
-        + ' values ' + values.join(',') + ';';
-
-        console.log(query);
-
-        client.query(query, function(err, result) {
-            if (err) {
-                return console.error('problem running query', err);
-            }
-
-        done();
+Promise
+    .all([
+        extract.customers(),
+        extract.orderLineItems(),
+        extract.orders(),
+        extract.products()
+    ])
+    .then(data => {
+        return {
+            customers: data[0],
+            orderLineItems: data[1],
+            orders: data[2],
+            products: data[3]
+        };
     })
-});
-});
-
-//import customer table
-
-translateCustomer(function(err, values) {
-    pg.connect(connection, function(err, client, done) {
-        if (err) {
-            return console.error('error', err)
-        }
-
-        const query = 'insert into tests.customer (customerId, title, prefix, firstName, lastName, suffix, phone, email)' 
-        + ' values ' + values.join(',') + ';';
-
-        console.log(query);
-
-        client.query(query, function(err, result) {
-            if (err) {
-                return console.error('problem running query', err);
-            }
-            // import order table
-            translateOrder(function(err, values) {
-                pg.connect(connection, function(err, client, done) {
-                    if (err) {
-                        return console.error('error', err)
-                    }
-
-                    const query = 'insert into tests.order (orderId,customerId,amount,date)' + ' values ' + values.join(',') + ';';
-
-
-                    client.query(query, function(err, result) {
-                        if (err) {
-                            return console.error('problem running query', err);
-                        }
-
-                        // import orderlineitem table
-                        translateOrderLineItem(function(err, values) {
-                            pg.connect(connection, function(err, client, done) {
-                                if (err) {
-                                    return console.error('error', err)
-                                }
-
-                                const query = 'insert into tests.orderlineitem (orderId, productId, quantity)' 
-                                + ' values ' + values.join(',') + ';';
-
-                                console.log(query);
-
-                                client.query(query, function(err, result) {
-                                    if (err) {
-                                        return console.error('problem running query', err);
-                                    }
-
-                                done();
-                            })
-
-                        })
-
+    .then(data => {
+        console.log('inserting customers into sql');
+        return load
+            .customers(data.customers)
+            .then(() => {
+                console.log('inserting products into sql');
+                return load.products(data.products)
+                    .then(() => {
+                        console.log('inserting orders into sql');
+                        return load.orders(data.orders)
+                            .then(() => {
+                                console.log('inserting order line items into sql');
+                                return load.orderLineItems(data.orderLineItems);
+                            });
                     });
-
-            done();
-        })
+            });
     })
-});
-        })
+    .then(() => {
+        console.log('finished.');
     })
-});
+    .catch((err) => {
+        console.log(err);
+    });
